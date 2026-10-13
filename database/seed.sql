@@ -87,7 +87,7 @@ INSERT INTO Historial_Estado (id_envio, id_estado, fecha_hora, id_sucursal_actua
   (3,1,'2026-01-11 08:00:00',3),(3,5,'2026-01-12 16:45:00',1);
 
 INSERT INTO Viaje (id_viaje, patente, id_chofer, fecha_salida, estado_viaje, id_suc_origen, id_suc_destino) VALUES
-  (1,'DEMO001',1,'2026-01-10 10:00:00','En camino',1,2);
+  (1,'DEMO001',1,'2026-01-10 10:00:00','En curso',1,2);
 
 INSERT INTO Viaje_Envio (id_viaje, id_envio) VALUES (1,1);
 

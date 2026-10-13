@@ -652,36 +652,23 @@ SET AUTOCOMMIT=@OLD_AUTOCOMMIT;
 /*!50003 SET character_set_results = utf8mb4 */ ;
 /*!50003 SET collation_connection  = utf8mb4_uca1400_ai_ci */ ;
 DELIMITER ;;
-CREATE  PROCEDURE `SP_Finalizar_Operatoria_Viaje`(IN p_id_viaje INT)
+CREATE PROCEDURE `SP_Finalizar_Operatoria_Viaje`(IN p_id_viaje INT)
 BEGIN
-    -- Declaramos el manejo de errores: si algo falla, hacemos ROLLBACK
-    DECLARE exit handler for sqlexception
-    BEGIN
-        ROLLBACK;
-    END;
+    -- Cierra un viaje. Un chofer o un vehiculo estan "disponibles" cuando no
+    -- tienen viajes Planificado / En curso / Demorado (ver models/Viaje.php),
+    -- asi que marcar el viaje como Finalizado alcanza para liberarlos: no hay
+    -- una columna de disponibilidad que mantener aparte.
+    UPDATE Viaje
+    SET estado_viaje = 'Finalizado'
+    WHERE id_viaje = p_id_viaje
+      AND estado_viaje NOT IN ('Finalizado', 'Cancelado');
 
-    -- Iniciamos la transacción segura
-    START TRANSACTION;
-
-    -- 1. Marcamos el viaje como finalizado (Asumiendo que 'Finalizado' es tu estado de cierre)
-    UPDATE Viaje 
-    SET estado_viaje = 'Finalizado' 
-    WHERE id_viaje = p_id_viaje;
-
-    -- 2. Liberamos al chofer asociado a ese viaje (Asumiendo que tenés un campo de disponibilidad/estado)
-    UPDATE Chofer c
-    INNER JOIN Viaje v ON c.id_chofer = v.id_chofer
-    SET c.activo = 1 -- O el estado que uses para 'Libre'
-    WHERE v.id_viaje = p_id_viaje;
-
-    -- 3. Liberamos el vehículo
-    UPDATE Vehiculo ve
-    INNER JOIN Viaje v ON ve.id_vehiculo = v.id_vehiculo
-    SET ve.estado = 'Disponible' -- O el estado que uses en tu tabla Vehiculo
-    WHERE v.id_viaje = p_id_viaje;
-
-    -- Si todo salió bien, confirmamos los cambios en disco
-    COMMIT;
+    -- Si no cambio nada, el viaje no existe o ya estaba cerrado. Se avisa con
+    -- un error en vez de devolver "ok" sin haber hecho nada.
+    IF ROW_COUNT() = 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Viaje inexistente, cancelado o ya finalizado';
+    END IF;
 END ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
@@ -702,7 +689,7 @@ DELIMITER ;
 /*!50001 SET collation_connection      = utf8mb4_uca1400_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013  SQL SECURITY DEFINER */
-/*!50001 VIEW `VW_Viajes_Activos` AS select `v`.`id_viaje` AS `id_viaje`,`v`.`estado_viaje` AS `estado_viaje`,`v`.`patente` AS `patente_vehiculo`,`c`.`nombre` AS `nombre_chofer`,`c`.`apellido` AS `apellido_chofer` from ((`Viaje` `v` join `Chofer` `c` on(`v`.`id_chofer` = `c`.`id_chofer`)) left join `Vehiculo` `ve` on(`v`.`patente` = `ve`.`patente`)) where `v`.`estado_viaje` = 'En camino' */;
+/*!50001 VIEW `VW_Viajes_Activos` AS select `v`.`id_viaje` AS `id_viaje`,`v`.`estado_viaje` AS `estado_viaje`,`v`.`patente` AS `patente_vehiculo`,`c`.`nombre` AS `nombre_chofer`,`c`.`apellido` AS `apellido_chofer` from ((`Viaje` `v` join `Chofer` `c` on(`v`.`id_chofer` = `c`.`id_chofer`)) left join `Vehiculo` `ve` on(`v`.`patente` = `ve`.`patente`)) where `v`.`estado_viaje` in ('En curso','Demorado') */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
