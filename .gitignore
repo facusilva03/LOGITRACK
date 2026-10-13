@@ -1,0 +1,12 @@
+# Configuración de base de datos — contiene credenciales, no se sube
+config/db.php
+
+# Logs y temporales
+*.log
+*.tmp
+
+# Volcados de base de datos: pueden contener datos reales. Solo se versionan
+# database/schema.sql (estructura) y database/seed.sql (datos ficticios).
+*.sql
+!database/schema.sql
+!database/seed.sql
